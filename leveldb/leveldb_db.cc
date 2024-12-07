@@ -312,6 +312,8 @@ DB::Status LeveldbDB::UpdateSingleEntry(const std::string &table, const std::str
 
   data.clear();
   SerializeRow(current_values, &data);
+  // Print key and data size
+  // std::cout << "key size: " << key.size() << ", data size: " << data.size() << std::endl;
   s = db_->Put(wopt, key, data);
   if (!s.ok()) {
     throw utils::Exception(std::string("LevelDB Put: ") + s.ToString());
@@ -324,6 +326,8 @@ DB::Status LeveldbDB::InsertSingleEntry(const std::string &table, const std::str
   std::string data;
   SerializeRow(values, &data);
   leveldb::WriteOptions wopt;
+  // Print key and data size
+  // std::cout << "key size: " << key.size() << ", data size: " << data.size() << std::endl;
   leveldb::Status s = db_->Put(wopt, key, data);
   if (!s.ok()) {
     throw utils::Exception(std::string("LevelDB Put: ") + s.ToString());

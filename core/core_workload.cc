@@ -216,10 +216,10 @@ std::string CoreWorkload::BuildKeyName(uint64_t key_num) {
   if (!ordered_inserts_) {
     key_num = utils::Hash(key_num);
   }
-  std::string prekey = "user";
-  std::string value = std::to_string(key_num);
-  int fill = std::max(0, zero_padding_ - static_cast<int>(value.size()));
-  return prekey.append(fill, '0').append(value);
+  // Set key as 16-byte to match uFS's configuration.
+  char key_buffer[17];  // 16B + null terminator
+  snprintf(key_buffer, sizeof(key_buffer), "%016lx", key_num);  // 16자리 hex 문자열로 변환
+  return std::string(key_buffer);
 }
 
 void CoreWorkload::BuildValues(std::vector<ycsbc::DB::Field> &values) {
