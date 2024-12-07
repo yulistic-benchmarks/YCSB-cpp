@@ -93,7 +93,7 @@ run_ycsb() {
 
 			if [ "$CPU_UTIL" = "1" ]; then
 				OUT_CPU_FILE=${output_file}.perfdata
-				PERF_PREFIX="sudo $PERF_BIN record -a -o $OUT_CPU_FILE --"
+				PERF_PREFIX="sudo $PERF_BIN record -F 99 -e cycles -a -o $OUT_CPU_FILE --"
 			else
 				PERF_PREFIX=""
 			fi
@@ -148,7 +148,7 @@ umountExt4() {
 # Default configurations.
 SYSTEM="ext4"
 DIR="./tempdir"
-CPU_UTIL=0
+CPU_UTIL=1
 EXT4_JOURNAL_MODE="journal"
 WORKLOADS="a b c d e f"
 THREADS="1 2 4 8 16"
