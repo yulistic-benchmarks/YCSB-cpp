@@ -101,8 +101,8 @@ run_ycsb() {
 
 
 			#  -p fieldcount=1 -p fieldlength=66: to set the size of data to be 80B (uFS configuration).
-			YCSB_LOAD_CMD="ycsb -load -db leveldb -P workloads/workload${WL} -P leveldb/myleveldb.properties -p threadcount=8 -p recordcount=2000000 -s -p fieldcount=1 -p fieldlength=66"
-			YCSB_CMD="ycsb -run -db leveldb -P workloads/workload${WL} -P leveldb/myleveldb.properties -p threadcount=${TH} -p operationcount=1000000 -s -p fieldcount=1 -p fieldlength=66"
+			YCSB_LOAD_CMD="ycsb -load -db leveldb -P workloads/workload${WL} -P leveldb/myleveldb.properties -p threadcount=8 -p recordcount=10000000 -s -p fieldcount=1 -p fieldlength=66"
+			YCSB_CMD="ycsb -run -db leveldb -P workloads/workload${WL} -P leveldb/myleveldb.properties -p threadcount=${TH} -p operationcount=100000 -s -p fieldcount=1 -p fieldlength=66"
 
 			if [ "$SYSTEM" == "oxbow" ]; then
 				if [ "$load_done" -eq "0" ];then
