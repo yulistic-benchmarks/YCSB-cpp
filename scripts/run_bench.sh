@@ -4,10 +4,11 @@
 #
 set -e
 print_usage() {
-	echo "Usage: $0 [ -t ext4|oxbow ] [ -c ] [ -j journal|ordered ]"
+	echo "Usage: $0 [ -t ext4|oxbow ] [ -c ] [ -j journal|ordered ] [ -l ]"
 	echo "	-t : System type. <ext4|oxbow> (ext4 is default)"
 	echo "	-c : Measure CPU utilization."
 	echo "	-j : Ext4 journal mode. <journal|ordered>"
+	echo "	-l : Do load db (need once)."
 }
 
 drop_caches() {
@@ -83,7 +84,7 @@ checkpoint() {
 }
 
 run_ycsb() {
-	load_done=0
+	load_done=$LOAD_DONE
 
 	# The order of workloads matters. Read workloads should be after a write workload.
 	for WL in $WORKLOADS; do
@@ -98,9 +99,10 @@ run_ycsb() {
 				PERF_PREFIX=""
 			fi
 
-			YCSB_LOAD_CMD="ycsb -load -db leveldb -P workloads/workload${WL} -P leveldb/myleveldb.properties -p threadcount=8 -p recordcount=2000000 -s"
 
-			YCSB_CMD="ycsb -run -db leveldb -P workloads/workload${WL} -P leveldb/myleveldb.properties -p threadcount=${TH} -p operationcount=1000000 -s"
+			#  -p fieldcount=1 -p fieldlength=66: to set the size of data to be 80B (uFS configuration).
+			YCSB_LOAD_CMD="ycsb -load -db leveldb -P workloads/workload${WL} -P leveldb/myleveldb.properties -p threadcount=8 -p recordcount=2000000 -s -p fieldcount=1 -p fieldlength=66"
+			YCSB_CMD="ycsb -run -db leveldb -P workloads/workload${WL} -P leveldb/myleveldb.properties -p threadcount=${TH} -p operationcount=1000000 -s -p fieldcount=1 -p fieldlength=66"
 
 			if [ "$SYSTEM" == "oxbow" ]; then
 				if [ "$load_done" -eq "0" ];then
@@ -152,11 +154,9 @@ CPU_UTIL=0
 EXT4_JOURNAL_MODE="journal"
 WORKLOADS="a b c d e f"
 THREADS="1 2 4 8 16"
-# WORKLOADS="a"
-# THREADS="1"
+LOAD_DONE=1 # Set to 0 to do load.
 
-
-while getopts "ct:j:?h" opt; do
+while getopts "ct:j:l?h" opt; do
 	case $opt in
 	c)
 		CPU_UTIL=1
@@ -170,6 +170,9 @@ while getopts "ct:j:?h" opt; do
 		;;
 	j)
 		EXT4_JOURNAL_MODE=$OPTARG
+		;;
+	l)
+		LOAD_DONE=0
 		;;
 	h | ?)
 		print_usage
@@ -225,7 +228,9 @@ if [ $SYSTEM == "ext4" ]; then
 
 	umountExt4
 
-	sudo mke2fs -t ext4 -J size=$TOTAL_JOURNAL_SIZE -E lazy_itable_init=0,lazy_journal_init=0 -F -G 1 $DEV_PATH -N $INODE_NUM
+	if [ "$LOAD_DONE" -eq "0" ];then
+		sudo mke2fs -t ext4 -J size=$TOTAL_JOURNAL_SIZE -E lazy_itable_init=0,lazy_journal_init=0 -N $INODE_NUM -F -G 1 $DEV_PATH
+	fi
 	sudo mount -t ext4 -o barrier=0,data=$EXT4_JOURNAL_MODE $DEV_PATH $MOUNT_PATH
 	sudo chown -R $USER:$USER $MOUNT_PATH
 	mkdir -p $DIR
