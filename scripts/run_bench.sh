@@ -148,7 +148,7 @@ umountExt4() {
 # Default configurations.
 SYSTEM="ext4"
 DIR="./tempdir"
-CPU_UTIL=1
+CPU_UTIL=0
 EXT4_JOURNAL_MODE="journal"
 WORKLOADS="a b c d e f"
 THREADS="1 2 4 8 16"
