@@ -210,7 +210,9 @@ if [ $SYSTEM == "ext4" ]; then
 	MOUNT_PATH="/mnt/ext4"
 	DIR="$MOUNT_PATH/ext4_${EXT4_JOURNAL_MODE}"
 	INODE_NUM=6104832 # To reduce mkfs time. Set proper value.
-	# PINNING="numactl -N1 -m1"
+	PINNING="numactl -N1 -m1"
+	NUMA="1"
+	CPU_MASK="16-31"
 
 	# Set nvme device path.
 	# DEV_PATH="/dev/nvme2n1"
@@ -235,8 +237,14 @@ if [ $SYSTEM == "ext4" ]; then
 	sudo chown -R $USER:$USER $MOUNT_PATH
 	mkdir -p $DIR
 
+	# NUMA binding:
+	jbd_pid=$(ps aux | grep jbd2 | grep $(basename $DEV_PATH) | xargs | cut -d ' ' -f2)
+	sudo taskset -cp $CPU_MASK $jbd_pid
+	echo "Binding jbd2 process($jbd_pid) to NUMA ${NUMA}. Taskset result:" 2>&1 | tee ./${OUTPUT_DIR}/fsconf
+	sudo taskset -p $jbd_pid 2>&1 | tee -a ./${OUTPUT_DIR}/fsconf
+
 	# Dump config.
-	sudo dumpe2fs -h $DEV_PATH > ./${OUTPUT_DIR}/fsconf
+	sudo dumpe2fs -h $DEV_PATH >> ./${OUTPUT_DIR}/fsconf
 
 elif [ $SYSTEM == "oxbow" ]; then
 	DIR="$OXBOW_PREFIX"
