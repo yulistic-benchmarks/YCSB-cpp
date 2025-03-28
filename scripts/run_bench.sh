@@ -8,7 +8,6 @@ print_usage() {
 	echo "	-t : System type. <ext4|oxbow> (ext4 is default)"
 	echo "	-c : Measure CPU utilization."
 	echo "	-j : Ext4 journal mode. <journal|ordered>"
-	echo "	-l : Do load db (need once)."
 }
 
 drop_caches() {
@@ -84,8 +83,6 @@ checkpoint() {
 }
 
 run_ycsb() {
-	load_done=$LOAD_DONE
-
 	# The order of workloads matters. Read workloads should be after a write workload.
 	for WL in $WORKLOADS; do
 		for TH in $THREADS; do
@@ -105,13 +102,10 @@ run_ycsb() {
 			YCSB_CMD="ycsb -run -db leveldb -P workloads/workload${WL} -P leveldb/myleveldb.properties -p threadcount=${TH} -p operationcount=100000 -s -p fieldcount=1 -p fieldlength=66"
 
 			if [ "$SYSTEM" == "oxbow" ]; then
-				if [ "$load_done" -eq "0" ];then
-					# Load
-					CMD="${LIBFS}/run.sh ${BENCH_YCSBCC}/${YCSB_LOAD_CMD} 2>&1 | tee -a ${output_file}.out"
-					echo Load command: "$CMD" | tee ${output_file}.out
-					eval $CMD # Execute.
-					load_done=1
-				fi
+				# Load
+				CMD="${LIBFS}/run.sh ${BENCH_YCSBCC}/${YCSB_LOAD_CMD} 2>&1 | tee -a ${output_file}.out"
+				echo Load command: "$CMD" | tee ${output_file}.out
+				eval $CMD # Execute.
 
 				restart_ox_daemon
 
@@ -121,13 +115,10 @@ run_ycsb() {
 				eval $CMD # Execute.
 
 			elif [ "$SYSTEM" == "ext4" ]; then
-				if [ "$load_done" -eq "0" ];then
-					# Load
-					CMD="sudo $PINNING ./${YCSB_LOAD_CMD} 2>&1 | tee -a ${output_file}.out"
-					echo Load command: "$CMD" | tee ${output_file}.out
-					eval $CMD # Execute.
-					load_done=1
-				fi
+				# Load
+				CMD="sudo $PINNING ./${YCSB_LOAD_CMD} 2>&1 | tee -a ${output_file}.out"
+				echo Load command: "$CMD" | tee ${output_file}.out
+				eval $CMD # Execute.
 
 				drop_caches
 
@@ -154,7 +145,6 @@ CPU_UTIL=0
 EXT4_JOURNAL_MODE="journal"
 WORKLOADS="a b c d e f"
 THREADS="1 2 4 8 16"
-LOAD_DONE=1 # Set to 0 to do load.
 
 while getopts "ct:j:l?h" opt; do
 	case $opt in
@@ -170,9 +160,6 @@ while getopts "ct:j:l?h" opt; do
 		;;
 	j)
 		EXT4_JOURNAL_MODE=$OPTARG
-		;;
-	l)
-		LOAD_DONE=0
 		;;
 	h | ?)
 		print_usage
@@ -230,9 +217,7 @@ if [ $SYSTEM == "ext4" ]; then
 
 	umountExt4
 
-	if [ "$LOAD_DONE" -eq "0" ];then
-		sudo mke2fs -t ext4 -J size=$TOTAL_JOURNAL_SIZE -E lazy_itable_init=0,lazy_journal_init=0 -N $INODE_NUM -F -G 1 $DEV_PATH
-	fi
+	sudo mke2fs -t ext4 -J size=$TOTAL_JOURNAL_SIZE -E lazy_itable_init=0,lazy_journal_init=0 -N $INODE_NUM -F -G 1 $DEV_PATH
 	sudo mount -t ext4 -o barrier=0,data=$EXT4_JOURNAL_MODE $DEV_PATH $MOUNT_PATH
 	sudo chown -R $USER:$USER $MOUNT_PATH
 	mkdir -p $DIR
